@@ -218,19 +218,20 @@ require('./models/User')
 const authRoutes = require('./routes/authRoute');
 // token ko lagane ke leye as a MIDDLEWARE 
 const requireToken = require('./middleware/AuthTokenRequired');
-
+const uploadMediaRoutes = require("./routes/UploadMediaRoutes");
 
 app.use(bodyParser.json());
 
 app.use(authRoutes)
+app.use(uploadMediaRoutes)
 
 // ab ham yaha pe middleware laga denge TOKEN
 // hamne bola ke jese he ye page load ho to pehle requireToken kro os ke bad response/request bhejo
 // ab ham authTokenRequired me jaye ge  
-app.post('/userdata',requireToken, (req, res) => {
+app.post('/userdata', requireToken, (req, res) => {
     // user ka data jese he mil jaye to ham log krwa skty hain usy 
     // ab hamary key to verify hogae
-    console.log("Mohsin data check kro yr",req.user);
+    console.log("Mohsin data check kro yr middleware ke token se", req.user);
     res.send(req.user);
     // res.send('This is home page');
 

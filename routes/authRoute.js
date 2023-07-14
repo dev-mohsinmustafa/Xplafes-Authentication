@@ -605,7 +605,7 @@ router.post('/verifyForgotPassword', (req, res) => {
 
 
 // ab hamara forgot password wala route bangya hai ab ham change password krwane waly hai to uske 
-// 1 route banana hai reset Password ke name se 
+// 1 route banana hai resetpassword ke name se 
 
 router.post('/resetPassword', (req, res) => {
     // ab yaha hamen kya kya chexen chahye 
@@ -849,7 +849,7 @@ router.post('/resetPassword', (req, res) => {
 
 
 
-// Change Password
+// Change Password frontend
 
 // change me ham 3chezen bolenge oldpassword newpassword or us user ka email ya id ham mangwa lenge 
 
@@ -896,40 +896,69 @@ router.post('/changePassword', (req, res) => {
 
 
 
-// update user data /username
+// update user data / change username frontend
+
+//an body me ham sirf 2 chezen he bheje ge username or email  || or username ke jagha mene apni
+// coding me fullName likha to me ye use kronga 
+// username or email bhejne se bs apka kam ban jaye ga
+
 router.post('/setusername', (req, res) => {
+
+    // ham body me se fullName or email extract kr lenge
+    // mtlb jis be fullName ko ham change krna chahty hai ya jis be email ke leye ham username || fullName
+    // change krna chahty hai 
+    // to us ke yaha new fullName provide kr den ge  
+    // man lo me username 123 rkhna chahta hun to wo fullName me aye yaha neche wale code ka ye mtlb hai
+    // or jis bndy ne try kya hai change krne ka uska email email me ajye ga 
 
     const { fullName, email } = req.body;
 
+    // ab ham yaha bolenge ke ye agr empty hai to eror de 
     if (!fullName || !email) {
         return res.status(422).json({ error: "Please fill all the fields" })
     }
     else {
+        // agr us ne sab kuch dala hai to ye code 
 
+        // VERY IMPORTANT POINT 
+        // user.find ke ander ham bolenge ke pele fullName do 
         // hamne bola ke check kro ke wo username available hai ke nai mtlb mohsin1122 pele se kise ne
         // leya hai to wo ap set ne kr skty 
         // to is leye ham bol rahy hai ke jo username usko find kro pehle se exists to nai krta 
+        // User.find({ fullName }) yaha ham findOne be laga skty
 
         User.find({ fullName })
-            //agr username nai hoga pele se to es me ajaye ga res as a saveduser
+            //agr username nai hoga pele se to es me ajaye ga response as a saveduser
             .then(async (savedUser) => {
                 if (savedUser.length > 0) {
                     return res.status(422).json({ error: "Username already exists" })
-                } else {
+                }
+                // yaha hamne bolna ke username pele se exist ne krta to ap new add kren
+                else {
+                    // yaha email se check kya hai mene ke jo email user dal raha wo hamry database
+                    // me exist me krta ya nai ye ap na be lagaye mene wese he safety ke leye lagaya
                     User.findOne({ email: email })
+                        // agr exists krta to ye kro 
                         .then(async (savedUser) => {
+                            // agr email exist krta to bhai ap fullName, username change kr lo
                             if (savedUser) {
+
+                                // yaha savedUser.fullName me old username para hai hamara
+                                // or new username = fullName  yaha save hoga 
                                 savedUser.fullName = fullName;
                                 savedUser.save()
                                     .then((user) => {
-                                        console.log("yes",user);
-                                        return res.status(422).json({ error: "Username Updated Successfully" })
+                                        console.log("yes mohsin", user);
+                                        // agr username saved hogya to ye 
+                                        return res.status(422).json({ message: "Username Updated Successfully" })
                                     })
-                                    .catch((err) => {
+                                    // agr username saved nai howa to ye 
+                                    .catch(err => {
                                         return res.status(422).json({ err: "Server Error" })
                                     })
                             }
-                            else{
+                            // agr email mila he nai to ye kro
+                            else {
                                 return res.status(422).json({ error: "Invalid Credentials" })
 
                             }
@@ -944,7 +973,29 @@ router.post('/setusername', (req, res) => {
 
 
 
+router.post('/setdescription', (req, res) => {
+    const { description, email } = req.body;
+    if (!description || !email) {
+        return res.status(422).json({ error: "Please add all the fields" });
+    }
 
+    User.findOne({ email: email })
+        .then(async savedUser => {
+            if (savedUser) {
+                savedUser.description = description;
+                savedUser.save()
+                    .then(user => {
+                        res.json({ message: "Description Updated Successfully" });
+                    })
+                    .catch(err => {
+                        return res.status(422).json({ error: "Server Error" });
+                    })
+            }
+            else {
+                return res.status(422).json({ error: "Invalid Credentials" });
+            }
+        })
+})
 
 
 module.exports = router;
