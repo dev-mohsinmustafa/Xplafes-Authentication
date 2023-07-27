@@ -17,7 +17,7 @@ router.post('/setprofilepic', (req, res) => {
 
     const { email, profilepic } = req.body;
     console.log("email", email);
-    console.log("profilepic", profilepic);
+    console.log("set image route seprofilepic", profilepic);
     // if (!email || !profilepic) {
     //     return res.status(422).json({ error: "Please provide email and profile picture" });
     // }

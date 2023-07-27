@@ -214,28 +214,218 @@ const bodyParser = require('body-parser');
 
 // require('./database/db');
 require('./models/User')
+require('./models/Message')
 
 const authRoutes = require('./routes/authRoute');
 // token ko lagane ke leye as a MIDDLEWARE 
 const requireToken = require('./middleware/AuthTokenRequired');
 const uploadMediaRoutes = require("./routes/UploadMediaRoutes");
+const MessageRoutes = require("./routes/MessageRoutes");
+
+
+
+
+// Video 19
+// aj hamne socket.io keleye 1 server banana hai socket ka 1 elada server banta hai
+// ham es ko elada file me be bana skty hai
+// ham ese asumme kr skty hai ke jo port hai 8090 wo us ko ham 2 bar use kr rahy hai 1 node js or socket.io
+// sab se pehle http se hamy 1 server banana hai
+const { createServer } = require("http");
+// us ke server ko import kr lena hai
+const { Server } = require("socket.io");
+// eske bad hamy 1 server bana hai
+// const httpServer  = createServer(app); es me ham app be likh skty hai
+const httpServer = createServer();
+// or yaha ab server banany keleye mene yaha bol diya yani ab ham 1 new server setup kr rahy hain socket.io ke leye 
+const io = new Server(httpServer, {}); // abi ke leye {} ye blank chor de lekin is ne options be likhty hai  
+//
+
+
+
+
+
+
 
 app.use(bodyParser.json());
 
 app.use(authRoutes)
 app.use(uploadMediaRoutes)
+app.use(MessageRoutes)
+
+
+
+
+
 
 // ab ham yaha pe middleware laga denge TOKEN
 // hamne bola ke jese he ye page load ho to pehle requireToken kro os ke bad response/request bhejo
 // ab ham authTokenRequired me jaye ge  
-app.post('/userdata', requireToken, (req, res) => {
+app.get('/', requireToken, (req, res) => {
     // user ka data jese he mil jaye to ham log krwa skty hain usy 
     // ab hamary key to verify hogae
     console.log("Mohsin data check kro yr middleware ke token se", req.user);
     res.send(req.user);
     // res.send('This is home page');
+})
+
+
+
+
+// SOCKET.IO
+// sab se pehle apko connection banana rehta hai  ke bhai user ne chat join ki hai 
+// os ke bad agr chat join ki hai to kis se ki hai mtlb samny wala banda be hai na
+// to in 2no ka ham 1 ROOM bana denge 
+// ab ROOM me esa nai hai ke sirf 2 bndy ho es me bohat sary bandy ho skty hai 
+// bohat sary bandy honge to ye GROUP CHAT hoge agr 2 huye to CONVERSATION hoge 
+// to es me ap khush be kr skty ho to abhi ke leye me 2 bndo jor raha hun ya / wala set kr raha hon
+// Ap isme GROUP CHAT be laga skty ho
+
+
+
+// 
+// apne sab se pehle likhna hai 
+// connection wala 1 command hota hai jo FRONTEND se ham ese dene walay hai ke bhai jese he frontend se ye connect hoga to ye connection wala
+// command hai wo run hojaye ga socket ka 
+//socket ko abhi ham frontend se connect krenge 
+io.on("connection", (socket) => {
+    // to ham ne bol deya ke agr connection howa hai to socket me jo be details aye hai us me sirf hmay id chahye us id ko 
+    // ham man lenge ke user ki id hai || ya is id se user connect howa hai 
+    // multiple type ke bohat sari id hoskti hai jese viraj 1 bnda hai wo 1 random id se connect howa hai 
+    // random id mtlb 
+    // esa nai ke email id hai ya user id hai us se connect howa esa nai hota yaha RANDOM koi id generate hoge or us se he connection ban jayega
+
+    console.log("USER CONNECTED - ", socket.id);
+    // user connect hoga to uski id ham display krwa denge kon se id SOCKET wali id  // socket.id
+    // socket.id random hoti hai koi be fixed nai rehti 
+    // mtbl aj me 1 id se join howa to 5 mint bad 1 dosri id se join howa esa chlta rhega
+    // console.log socket.id ye sirf es leye likha pata krene ke leye ke koi join howa to ye id print hojaye ge
+    // agr koi join howa hoga chat pe to pata lag jaye ga 2 he log join hone waly hai me or mera dost to 2 ids generate honge 
+    // ye to user connect hogya
+
+    // es ke bad hamy ye be bataana prega ke agr user ne chat chor de to 1 disconnect wali command call hojaye 
+    // or kon sa user disconnect howa hai us ki id be print krwa denge 
+
+
+    socket.on("disconnect", () => {
+        console.log("USER DISCONNECT - ", socket.id);
+    })
+
+    //  es ke bad ese he agr kise user ne ROOM JOIN kiya hai to 
+    // WHAT IS ROOM?
+    // me 1 chat khol ke betha hun or samny wala be 1 chat khol ke betha howa hai ab dono ko chat to same he dekhenge na mtlb agr wo mere 
+    // chat khol ke betha hai ya me uski chat khol ke betha hun to chat to same he show honge na 
+    // to basically wo 1 chat store hoti hai ROOM me to ham us ROOM se connect krty hai jab be ham us dost se baat chet krna chahty hai /
+    // jese he ham us ROOM se connect howe to ham uski details mang lenge ke bhai abhi tk kya baat chet howi hai to es leye ham ROOM bana rhy hai
+
+
+    // to ap ye samjh len ke 1 kamry me 2 log bethy baat kr rahy hai  
+    // 2sre kamry me 2 log bethy baat kr rahy hai 
+    // to sab ka seperate seperate room hone wala hai 
+    // mtlb private conversation jo hoti hai 2 logon ki to us me 2 logon ka 1 kamra hoga 
+    // ese he 2sre logon ka dosra kamra hoga 
+    // ye log unki chat ne dekh skty or wo inki nai dekh skty  es se basically ye hota hai ke jis ko message bhejna sirf ussi ke pass pohanchy
+
+    // to es ke leye 1 !ROOM banana hai
+    // es ke leye 1 simple ka command ham frontend se banay waly hai  mtbl name fixed ne rehta ap koi name de do ap join_room likh lo
+    // or es data ke ander jo be details wegara hai wo es ke ander ajyenge ke kis room se connected hai
+    socket.on("join_room", (data) => {
+        // to room hamko esa banana prega ke jis se ap bol skty ho ke ye 1 ROOM hai 1 2 3  esko agr me next time call kron to mujhe us se 
+        // related chats be mil jaye esa nai hai ke bhai chat ud jaye gaib hojaye mujhe chats be saved krwani hai to us keleye 
+
+        // ab ROOM ki jo id hoti hai na es me room ki 1 id ham bana skty hai 
+        // us id ko ham kya kr skty hai ke bhai ma lo mera jo user hai jo ORIGINAL DATABASE ME JO ID STORED HAI JO HAR BAR USER KE KAAM ATI HAI
+        // JO USER KI ID HAI ORIGINAL JO CHANGE NAI HOTI
+
+
+        // JESe man lenge viraj123 / vj0987 ye 2 id hain 
+        // to kyo na ham 1 esa room bana den jis ko me kabi be call kro to mujhe in dono ki chats milen
+        // TO ROOM ESA HONA CHAHYEE JIS KI ID KABI BA BADLEN TO ID AP simple se rkh lo // hj123vj0987
+        // hj123vj0987 to esa 1 combination banaa ke ham MONGODB database me store krwa denge or ese ko call kr lenege 
+        // mtlb database me store ne krwaye ge is ko  
+        // basically hone wala ye hai ke 1 user hai 2sra user hai to un 2no ki id combine hoke to yehe bane ga na to bs ham es room ko call krlenge
+        // or us ROOM ke ander jo be chats save honge wo wapis ho ke hamy mil jayenge sirf itna krna hai 
+
+        //ab ap bologe ke bhai combination esa be to hoskta hai na  // hj123vj0987  ham vj0987 ko pehle likh len or save krewaden // vj0987hj123 
+        // to esa bilkul hoskta hai to es ke leye hai kya lagayenge sorting wala 1 lagayenge ke bhai 2 user id ko sort kro ke 1 bari ho or 1 choti
+        // to hamesha esa hoga ke bari wali pehle he aye ge to esa kush ne hoga ke udr se apne hj123 wala pehle mil esa kuch nai hai
+        // agr hj123 wala es side se bara hai to us side se be bara he hoga to ese ham save krwane waly hai es ko agy ham or check lekin
+        // abhi mene apko bata diya ke room ki id ese hone wali hai kush
+        // mtlb 2 user ki ORIGINAL id jo database me save hoge to use me se ham 1 esa hj123vj0987 combination bana denge
+
+        //  ham yaha kush esa print krwayege ke jo joined user hai us ki be id mil jaye or ROOM ki id be miljaye
+        // to ap simply socket.id ko be print krwa dena
+        console.log("USER WITH ID - ", socket.id, "JOIN ROOM - ", data.roomid);
+        // mene bola ke user hai us ki ye wali id hai socket.id or usne join kiya ye wala room data.roomid
+        // to roomid ham frontend se bhej denge hj123vj0987 ese wali 
+        // dekho frontend se kush data aye data me or us me se ham data.roomid room ki id nikal lenge 
+
+
+        // es ke bad ham 1 command lagana baqi rehti hai socket.join
+
+        // hamy es data se join krwana hai hmy is id se join krwana hai 
+        // ham simply data likhdenge data likhenge us ke ander jo be chezen hoti hai ajati hai to ye data pora bhjna prta hai
+        socket.join(data);
+
+        // data bhejne se banda es room id me join hojaye ga 
+        //  jese he mene apne dost ki chat open ki to me is me join hojaon ga 
+        // mtlb me apni userid nikalonga or dost ki userid nikalonga or un 2no ka combination bana ke me backend se bhej donga mene bol deya ke mene ye chat join krley
+        // to bs es se backend me ye chat ane wali hai 
+
+
+
+        // es ke bad 1 sendmessage wala hota hai 
+        socket.on("send_message", (data) => {
+            // es me 2 chezen hoti hai 1 to apne message send kiya or dosre ko recieve be hona chahye 
+            // to apne message send kiya or wo backend me aye or backend se ham user ko 1 notification bejen ke han bhai us bandy ne message bheja hai
+            // to ye real time ke leye kam ane wala hai realtime chat ke leye
+            // to bas apne krna hai jo be message recieve howa hai wo print krwa lenge hi hello wala kis ne kya message bheja wo be dekhe ga
+
+
+            console.log("MESSAGE RECEIVED - ", data);
+            // data mtlb 1 esa object type ka bhejen ge ke jis ke ander 
+            // /message hoga 
+            // jis ne bheja uski id hoge
+            // apni id hoge ese chezen ham bhejne waly hai
+            // ye sab frontend se bheje ge us se backend me aye ga ye
+
+
+            // es ke bad emit krna prega hmy
+            // io. es name ka variable lagaya tha na es leye
+            //ab jese he apne message send kiya to recieve be to krwana hai na samny waly ko
+            // samny waly ke pass message jana chahye us ke received_message wala hota hai
+            io.emit("received_message", data);
+            // es se received_message be fire hoga
+            // jese he ham message send krenge to frontend se received_message ko fire krwaye ge
+
+            // ye ham ne jitna be banaya hai ye sab frontend se fire honge or backend me jese he ye notification ajaye gen to agy proceed kro
+            // es ke elawa be socket.io me chezen hoti hai ap laga skty ho lekin abi ke leye ye bohat hai
+        })
+
+
+    })
+
 
 })
+//
+
+
+//
+// 1 kam ham aor kr skty hai ke ham es ka 1 seperate port bana lete hai jo mene shru me btaya tha apko ese be join hojaye lekin ap seperate bana lo
+// es se easy rahega
+
+const PORT1 = process.env.PORT1 || 8091; // ap 8090 ye same port be rkh skty hai  
+httpServer.listen(PORT1, () => {
+    console.log(`SOCKET IO Server is running on port ${PORT1}`);
+})
+
+// to ab apko kush routes be banay hai to me message routes bana leta hun 
+// es se basically kya krenge ke bhai apne aj 1 message kiya dsot ko to apko database me save be to krwana hai 
+// eaa nai hai ke apne chat band ki wapis ayo ge to wapis be to apko chahye to socket.io se save ne hoti chat bas realtime chat dekhti hai
+// purane message ur jaye ge to us ke leye ap database me save krwa lo jese he mene wo page khola apne dost ki chat kholi to mujhe chat dikh jaye ge 
+//load hojae ge or jitna realtime hai wo socket chal jaye ge to us me ap database ka use krne waly hai route bana ke 
+//
+
+
 
 const PORT = process.env.PORT || 8090;
 app.listen(PORT, () => {

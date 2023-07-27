@@ -49,7 +49,27 @@ const userSchema = new mongoose.Schema({
     profilepic:{
         type: String,
         default : "",
-    }
+    },
+    description: {
+        type: String,
+        default: ''
+    },
+    feedback: {
+        type: String,
+        default: ''
+    },
+    message: {
+        type: String,
+        default: ''
+    },
+    followers: {
+        type: [],
+        default: ''
+    },
+    following: {
+        type: [],
+        default: ''
+    },
 })
 
 

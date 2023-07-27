@@ -693,24 +693,24 @@ router.post('/resetPassword', (req, res) => {
 
 // Userdata
 // ye route ab mene as a middleware AuthTokenRequired.js bana liya hai or ese server me call kr lya
-// router.post('/userdata', (req, res) => {
-//     const { authorization } = req.headers;
-//     if (!authorization) {
-//         return res.status(401).json({ error: "Invalid Credentials, You must be logged in, token not given" })
-//     }
-//     const token = authorization.replace("Bearer ", "");
-//     console.log(token);
-//     jwt.verify(token, process.env.JWT_SECRET, (err, payload) => {
-//         if (err) {
-//             return res.status(401).json({ error: "Invalid Credentials, You must be logged in, token invalid" })
-//         }
-//         const { _id } = payload;
-//         User.findById(_id)
-//             .then((userdata) => {
-//                 res.status(200).send({ message: "User found", user: userdata })
-//             })
-//     })
-// })
+router.post('/userdata', (req, res) => {
+    const { authorization } = req.headers;
+    if (!authorization) {
+        return res.status(401).json({ error: "Invalid Credentials, You must be logged in, token not given" })
+    }
+    const token = authorization.replace("Bearer ", "");
+    console.log(token);
+    jwt.verify(token, process.env.JWT_SECRET, (err, payload) => {
+        if (err) {
+            return res.status(401).json({ error: "Invalid Credentials, You must be logged in, token invalid" })
+        }
+        const { _id } = payload;
+        User.findById(_id)
+            .then((userdata) => {
+                res.status(200).send({ message: "User found", user: userdata })
+            })
+    })
+})
 
 
 
@@ -996,6 +996,264 @@ router.post('/setdescription', (req, res) => {
             }
         })
 })
+
+
+
+
+
+
+
+
+
+
+router.post('/setfeedback', (req, res) => {
+    const { feedback, email } = req.body;
+    if (!feedback || !email) {
+        return res.status(422).json({ error: "Please add all the fields" });
+    }
+
+    User.findOne({ email: email })
+        .then(async savedUser => {
+            if (savedUser) {
+                savedUser.feedback = feedback;
+                savedUser.save()
+                    .then(user => {
+                        res.json({ message: "FeedBack Updated Successfully" });
+                    })
+                    .catch(err => {
+                        return res.status(422).json({ error: "Server Error" });
+                    })
+            }
+            else {
+                return res.status(422).json({ error: "Invalid Credentials" });
+            }
+        })
+})
+
+
+
+
+
+
+router.post('/setmessage', (req, res) => {
+    const { message, email } = req.body;
+    if (!message || !email) {
+        return res.status(422).json({ error: "Please add all the fields" });
+    }
+
+    User.findOne({ email: email })
+        .then(async savedUser => {
+            if (savedUser) {
+                savedUser.message = message;
+                savedUser.save()
+                    .then(user => {
+                        res.json({ message: "Message has been sent Successfully" });
+                    })
+                    .catch(err => {
+                        return res.status(422).json({ error: "Server Error" });
+                    })
+            }
+            else {
+                return res.status(422).json({ error: "Invalid Credentials" });
+            }
+        })
+})
+
+
+
+
+
+// get searched user by keywords
+
+// jo be user ke name m se ya n se shru hoty hai jo be kwyword me milega wo me yaha return krwaon ga as a response 
+
+router.post("/searchuser", (req, res) => {
+    // frontend se keyword nikalenge 
+
+    // ye keyword bar bar change hoga jese ap ne m likha or bad me n 
+    const { keyword } = req.body;
+
+
+    if (!keyword) {
+        return res.status(422).json({ error: "Please search a username" })
+    }
+
+
+
+    // us ke apko 1 chez use krne parti hai regex ye monogdb me hota hai
+    User.find({ fullName: { $regex: keyword, $options: "i" } })
+        // hamne bola regex me keyword dal do
+        // ye basically keyword ko as a string treat krta hai
+        // it treat as a substring of username
+        // yani agr mene likha mo to sary mo waly user ajayen ge
+
+        // uske bad hamne bola jo users hai wo is ke ander return hojayenge
+
+
+
+        // jo ham user lerhy hai us se password be aye ga to esa nai krna
+        // .then(user => {
+        //     console.log(user);
+        //     res.status(200).send({ message: "User Found", user: user })
+        // })
+        // is se bachne ke leye 
+        .then(user => {
+            let data = [];
+            // ab is me push krdenge 
+            user.map(item => {
+                // us data me apko kya kya lena hai wo bta do
+                data.push(
+                    {
+                        _id: item._id,
+                        fullName: item.fullName,
+                        email: item.email,
+                        description: item.description,
+                        profilepic: item.profilepic,
+                    }
+                )
+            })
+            // response bhejna
+
+            console.log(data);
+            if (data.length == 0) {
+                return res.status(422).json({ error: "No User Found" });
+            }
+            res.status(202).send({ message: "User Found", user: data })
+        })
+        .catch(err => {
+            console.log(err);
+            res.status(422).json({ error: "Server Error" })
+
+        })
+
+
+
+
+
+
+})
+
+
+
+
+
+// kise or user ka mujhe agr data chahyee 
+// me us ka email provide kro or mujhe data mil jaye to e userdata wala route copy kronga
+// get otheruserdata 
+
+
+// me agr kise dosre user ki profile dekhna chahhta hun to 
+router.post('/otheruserdata', (req, res) => {
+
+    // sirf email chhaye
+    const { email } = req.body;
+    if (!email) {
+        return res.status(422).json({ error: "Please add email" })
+    }
+
+
+
+
+    User.findOne({ email: email })
+        .then(savedUser => {
+            if (!savedUser) {
+                return res.status(422).json({ error: "Invalid Credentials" })
+            }
+            console.log(savedUser);
+
+            // userdata me mujhe password ne chahyee
+            let data = {
+                _id: savedUser._id,
+                fullName: savedUser.fullName,
+                email: savedUser.email,
+                profilepic: savedUser.profilepic,
+            };
+
+
+            res.status(200).send({ message: "User Found", user: data, })
+
+
+            // console.log(data);
+
+
+        })
+
+
+
+
+
+
+    // User.findOne({ email: email })
+    //     .then(userdata => {
+    //         res.status(200).send({ message: "User Found", user: userdata })
+    //     })
+})
+
+
+
+
+
+
+// check follow
+router.post("/checkfollow", (req, res) => {
+    const { followfrom, followto } = req.body;
+    // followfrom = my email,
+    // followto = friends email,
+    console.log(followfrom, followto);
+    // followfrom mtlb mera email 
+    // followto mtlb jis ko follow kiya oska email 
+
+    if (!followfrom || !followto) {
+        return res.status(422).json({ error: "Invalid Credentials" })
+    } 
+
+
+    // me check krna chhata hun ke me osko follow kr raha hun ke nai
+    // to pehle me khud ka email find kronga
+    User.findOne({ email: followfrom })
+        .then(mainuser => {
+            if (!mainuser) {
+                return res.status(422).json({ error: "Invalid Credentials" })
+            }
+            // agr mera khud ka mil gya data
+            else {
+                // following mtlb jis ko me follow krta hu 
+                // let data = mainuser.following.includes(followto) // mainuser me khud hun
+                // mtlb agr me apne dost ko follow krta hun to uska email mere following wali array me hoga
+                // mere following [] kaha hai to ye database me hai
+
+                let data = mainuser.following.includes(followto);
+                // es pore code ka mtlb agr hamra following me hamary friend ka email hai to ham usy follow krty hai
+                // console.log(data);
+                // agr data sai hai to ham usefollow krty hain
+                if (data === true) {
+                    return res.status(200).send({ error: "User in following list" })
+
+                }
+                // agr data sai nai hai to ham usefollow nai krty hain
+
+                else {
+                    return res.status(200).send({ error: "User not in following list" })
+
+                }
+
+            }
+        })
+        .catch(err =>{
+            console.log(err);
+            return res.status(422).json({ error: "Server Error" })
+
+
+        })
+
+
+
+})
+
+
+// follow user 
+
+// unfollow user 
 
 
 module.exports = router;
